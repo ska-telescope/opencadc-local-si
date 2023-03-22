@@ -1,92 +1,262 @@
-# opencadc-local-si
+# CADC Storage Inventory
+
+- [CADC Storage Inventory](#cadc-storage-inventory)
+  * [Ansible deployment of CADC Storage Inventory](#ansible-deployment-of-cadc-storage-inventory)
+    + [Use Ansible](#use-ansible)
+    + [Configuring Inventory File](#configuring-inventory-file)
+    + [Run Playbook](#run-playbook)
+  * [Running from CLI](#running-from-cli)
+    + [Start / Stop  Storage Inventory](#start---stop--storage-inventory)
+  * [Building steps-by-step](#building-steps-by-step)
+    + [Java Container](#java-container)
+    + [PostGreSQL Container](#postgresql-container)
+    + [TomCat Container](#tomcat-container)
+    + [HAProxy Container](#haproxy-container)
+  * [Instantiation](#instantiation)
+    + [PostgreSQL](#postgresql)
+    + [TomCat](#tomcat)
+    + [HAproxy](#haproxy)
+  * [Building Storage Inventory](#building-storage-inventory)
+    + [Requirements](#requirements)
+    + [Building `minoc`](#building--minoc-)
+    + [Instantiate `minoc`](#instantiate--minoc-)
+    + [Building `luskan`](#building--luskan-)
+    + [Instantiate `luskan`](#instantiate--luskan-)
+    + [Building `critwall`](#building--critwall-)
+    + [Instantiate `critwall`](#instantiate--critwall-)
+    + [Building `fenwich`](#building--fenwich-)
+    + [Instantiate `fenwich`](#instantiate--fenwich-)
+- [TechDebt](#techdebt)
+
+# Storage inventory components diagram
+
+![SI](https://github.com/opencadc/storage-inventory/raw/master/docs/storage-site.png)
+
+## Ansible deployment of CADC Storage Inventory
+### Use Ansible
+You can install a released version of Ansible with pip or a package manager. See our installation guide for details on installing Ansible on a variety of platforms.
+
+Power users and developers can run the devel branch, which has the latest features and fixes, directly. Although it is reasonably stable, you are more likely to encounter breaking changes when running the devel branch. We recommend getting involved in the Ansible community if you want to run the devel branch.
 
 
+### Configuring Inventorie File
+You need to add the target host in the inventorie
+```
+vi inventories/hosts
+```
+### Requeriments
+Ansible version: latest.
 
-## Getting started
+Example: Ubuntu version
+```
+sudo apt update
+sudo apt upgrade
+sudo apt install software-properties-common
+```
+Next add ppa:ansible/ansible to your system’s Software Source:
+```
+sudo apt-add-repository ppa:ansible/ansible
+```
+You need install ansible-galaxy collection
+```
+ansible-galaxy collection install community.crypto
+ansible-galaxy collection install community.docker
+```
+### Run Playbook
+The first step is build the docker images
+```
+ansible-playbook -i inventories/hosts cadc-install.yml
+```
+If you get a error during the deployment, remember to remove all created containers
+```
+docker rm -f $(docker ps -a -q)
+```
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Running from CLI
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+### Start / Stop  Storage Inventory
 
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+Clone this repository
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/ska-telescope/opencadc-local-si.git
-git branch -M main
-git push -uf origin main
+git clone https://gitlab.com/jsancheziaa/cadc-storage-inventory
 ```
 
-## Integrate with your tools
+Run `cadc-si-start.sh`:
 
-- [ ] [Set up project integrations](https://gitlab.com/ska-telescope/opencadc-local-si/-/settings/integrations)
+```
+cd cadc-storage-inventory
+bash cadc-si-start.sh
+```
 
-## Collaborate with your team
+To stop all the services:
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+```
+bash cadc-si-stop.sh
+```
 
-## Test and Deploy
+To delete all the services:
 
-Use the built-in continuous integration in GitLab.
+```
+bash cadc-si-delete.sh
+```
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+## Building steps-by-step
 
-***
+### Java Container
 
-# Editing this README
+```
+docker build -t cadc-java -f Dockerfile .
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+### PostGreSQL Container
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+Beforehand update file ´cadc-postgres-dev/src/init/init-content.sh´ and if you are going to deploy minoc, add the next:
 
-## Name
-Choose a self-explaining name for your project.
+```
+...
+DATABASES="minoc_inventory"
+SCHEMAS="schema_minoc_inventory"
+...
+```
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+Then go to `cadc-postgres-dev` and build the container
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+```
+docker build -t cadc-postgresql-dev -f Dockerfile.pg10 .
+```
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+### TomCat Container
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+```
+docker build -t cadc-tomcat -f Dockerfile .
+```
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### HAProxy Container
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+Pre-create a pair of keys autosigned:
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+```
+openssl genrsa -out mydomain.key 2048
+openssl req -new -key mydomain.key -out mydomain.csr
+openssl x509 -req rsa:2048 -days 365  -in mydomain.csr -signkey mydomain.key -out mydomain.crt
+cat mydomain.key mydomain.crt >> server-cert.pem
+```
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+Build container:
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+```
+docker build -t cadc-haproxy-dev -f Dockerfile .
+```
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+## Instantiation
 
-## License
-For open source projects, say how it is licensed.
+*Note the order.*
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+### PostgreSQL
+
+Note: we used "--volume=/Users/manuparra/repos/docker-base/config/" remember to change it.
+
+```
+docker run -d --volume=/Users/manuparra/repos/docker-base/config/postgresql:/config:ro --volume=/Users/manuparra/repos/docker-base/config/postgresql-logs:/logs:rw -p 5432:5432 --name pg10db cadc-postgresql-dev:latest
+```
+
+### TomCat
+```
+docker run -d --user tomcat:tomcat --volume=/Users/manuparra/repos/docker-base/config/tomcat:/config:ro --name cadc-service cadc-tomcat:latest 
+```
+
+### HAproxy
+```
+docker run -d  --volume=/Users/manuparra/repos/docker-base/config/haproxy/logs:/logs:rw --volume=/Users/manuparra/repos/docker-base/certs/:/config:ro --link cadc-service:cadc-service -p 8443:443 --name haproxy cadc-haproxy-dev:latest
+```
+
+
+## Building Storage Inventory
+
+### Requirements
+
+Install `gradle` and `maven`.
+
+Clone this repository:
+
+```
+git clone https://github.com/opencadc/storage-inventory.git
+```
+
+### Building `minoc`
+
+```
+cd minoc
+gradle clean build
+docker build -t minoc -f Dockerfile .
+```
+
+### Instantiate `minoc`
+
+```
+docker run -d --user tomcat:tomcat  --link pg10db:pg10db --volume=/Users/manuparra/repos/docker-base/config/minoc:/config:ro --name minoc cadc-minoc:latest
+```
+
+### Building `luskan`
+
+```
+cd luskan
+gradle clean luskan
+docker build -t luskan -f Dockerfile .
+```
+
+### Instantiate `luskan`
+
+```
+docker run -d --user tomcat:tomcat  --link pg10db:pg10db --volume=/Users/manuparra/repos/docker-base/config/luskan:/config:ro --name luskan cadc-luskan:latest
+```
+
+### Building `critwall`
+
+```
+cd luskan
+gradle clean luskan
+docker build -t luskan -f Dockerfile .
+```
+
+### Instantiate `critwall`
+
+```
+docker run -d --user tomcat:tomcat  --link pg10db:pg10db \
+              --volume=/Users/manuparra/repos/docker-base/config/critwall:/config:ro 
+              --name critwall 
+              critwall:latest
+```
+
+### Building `fenwich`
+
+```
+cd fenwich
+gradle clean fenwich
+docker build -t fenwich -f Dockerfile .
+```
+
+### Instantiate `fenwich`
+
+```
+docker run -d --user tomcat:tomcat  --link pg10db:pg10db \
+              --volume=/Users/manuparra/repos/docker-base/config/fenwick:/config:ro 
+              --name fenwick 
+              fenwick:latest
+```
+
+
+
+# TechDebt
+
+- Export HAproxy configuration to solve the Warning: 
+```
+[WARNING] 348/090903 (19) : Setting tune.ssl.default-dh-param to 1024 by default, if your workload permits it you should set it to at least 2048. Please set a value >= 1024 to make this warning disappear.
+```
+- Check `/conf` and `/config` within HAProxy deployment and Documentation.
+- Problem with underscores and middle dash for DBs and Scheme
+- `OpaqueFileSystemStorageAdapter.org.opencadc.inventory.storage.fs.baseDir` ?
+  - `#org.opencadc.inventory.storage.fs.baseDir = /tmp/`
+  - `org.opencadc.inventory.storage.fs.OpaqueFileSystemStorageAdapter.baseDir = /tmp`
