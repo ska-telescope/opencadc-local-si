@@ -1,0 +1,3 @@
+input-files:
+  - /tmp/ssl_cert.pem
+  - /tmp/ssl_private.key
