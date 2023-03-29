@@ -6,7 +6,7 @@
   - LOGS_FOLDER: "{{BASE_DIR}}/logs"
   - CERTIFICATES_FOLDER: "{{BASE_DIR}}/certificates/cacerts"  # SSL certificates need to be in here, cacerts in subdir 'cacerts'
   - GIT_REPO: "https://gitlab.com/ska-telescope/src/ska-opencadc-local-si.git"
-  - GIT_VERSION: main
+  - GIT_VERSION: config-update
   - MINOC_DATA_DIR: "/minoc"
   - SI_REPO_PATH: "images.opencadc.org/storage-inventory"
   - MINOC_VERSION: 0.9.1
@@ -147,7 +147,7 @@
         - "pg12db:pg12db"
       volumes:
         - "{{CONFIG_FOLDER}}/config/minoc:/config:ro"
-	- "{{MINOC_DATA_DIR}}:/data:rw"
+        - "{{MINOC_DATA_DIR}}:/data:rw"
       state: started
 
   - name: pause for wait to minoc
@@ -180,6 +180,7 @@
         - "pg12db:pg12db"
       volumes:
         - "{{CONFIG_FOLDER}}/config/tantar:/config:ro"
+        - "{{MINOC_DATA_DIR}}:/data:rw"
       state: started
 
   - name: pause for wait to tantar
@@ -228,6 +229,7 @@
         - "pg12db:pg12db"
       volumes:
         - "{{CONFIG_FOLDER}}/config/critwall:/config:ro"
+        - "{{MINOC_DATA_DIR}}:/data:rw"
       state: started
 
   - name: pause for wait to critwall
