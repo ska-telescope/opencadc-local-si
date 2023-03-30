@@ -6,7 +6,7 @@
   - LOGS_FOLDER: "{{BASE_DIR}}/logs"
   - CERTIFICATES_FOLDER: "{{BASE_DIR}}/certificates/cacerts"  # SSL certificates need to be in here, cacerts in subdir 'cacerts'
   - GIT_REPO: "https://gitlab.com/ska-telescope/src/ska-opencadc-local-si.git"
-  - GIT_VERSION: config-update
+  - GIT_VERSION: main
   - DATA_DIR: "/test"
   - SI_REPO_PATH: "images.opencadc.org/storage-inventory"
   - MINOC_VERSION: 0.9.1
