@@ -11,12 +11,7 @@ Example: Ubuntu version
 ```
 sudo apt update
 sudo apt upgrade
-sudo apt install software-properties-common ansible
-```
-You need install ansible-galaxy collection
-```
-ansible-galaxy collection install community.crypto
-ansible-galaxy collection install community.docker
+sudo apt install ansible
 ```
 
 ## Storage inventory components diagram
@@ -45,6 +40,8 @@ The ansible playbook will:
  - clone this very repo into the directory for the config files
  - pull the required images from images.opencadc.org/storage-inventory
  - launch the containers and bind-mount the respective config files and where required the data directory into the contaiers.
+
+The only complication will be that you will need to put the SSL-certificates into the certificates directory specified in the playbook file. The server's public + private key need to be in a file called server-cert.pem and the client's CA-certificates will need to be in the subdirectory `cacerts` inside the certificates directory.
 
 ### Run Playbook
 ```

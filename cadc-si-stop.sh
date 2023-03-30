@@ -1,8 +1,7 @@
 #!/bin/bash
 
-docker stop haproxy
-docker stop critwall
-docker stop fenwick
-docker stop luskan
-docker stop minoc
-docker stop pg10db
+containers='haproxy critwall fenwick luskan minoc pg12db tantar ratik'
+
+for cont in ${containers}; do
+    sudo docker stop ${cont}
+done
