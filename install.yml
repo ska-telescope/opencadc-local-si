@@ -247,22 +247,22 @@
     ansible.builtin.pause:
       seconds: "{{ WAIT_SECONDS | int }}"
 
-#  - name: Launch {{HAPROXY_IMAGE}}
-#    become: yes
-#    docker_container:
-#      name: haproxy
-#      image: "{{HAPROXY_IMAGE}}:latest"
-#      ports:
-#        - "{{HAPROXY_EXPOSED_PORT}}:443"
-#      volumes:
-#        - "{{LOGS_FOLDER}}:/logs:rw"
-#        - "{{CERTIFICATES_FOLDER}}:/config:ro"
-#        - "{{CONFIG_FOLDER}}/config/haproxy:/usr/local/etc/haproxy/:rw"
-#      links:
-#        - "minoc:minoc"
-#        - "luskan:luskan"
-#       - "critwall:critwall"
-#       - "fenwick:fenwick"
-#	- "tantar:tantar"
-#	- "ratik:ratik"
-#      state: started
+  - name: Launch {{HAPROXY_IMAGE}}
+    become: yes
+    docker_container:
+      name: haproxy
+      image: "{{HAPROXY_IMAGE}}:latest"
+      ports:
+        - "{{HAPROXY_EXPOSED_PORT}}:443"
+      volumes:
+        - "{{LOGS_FOLDER}}:/logs:rw"
+        - "{{CERTIFICATES_FOLDER}}:/config:ro"
+        - "{{CONFIG_FOLDER}}/config/haproxy:/usr/local/etc/haproxy/:rw"
+      links:
+        - "minoc:minoc"
+        - "luskan:luskan"
+        - "critwall:critwall"
+        - "fenwick:fenwick"
+	- "tantar:tantar"
+	- "ratik:ratik"
+      state: started
