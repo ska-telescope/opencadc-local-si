@@ -1,0 +1,267 @@
+---
+- hosts: localhost
+  vars:
+  - BASE_DIR: "/home/ubuntu"
+  - CONFIG_FOLDER: "{{BASE_DIR}}/config"
+  - LOGS_FOLDER: "{{BASE_DIR}}/logs"
+  - CERTIFICATES_FOLDER: "{{BASE_DIR}}/certificates/cacerts"  # SSL certificates need to be in here, cacerts in subdir 'cacerts'
+  - GIT_REPO: "https://gitlab.com/ska-telescope/src/ska-opencadc-local-si.git"
+  - GIT_VERSION: main
+  - DATA_DIR: "/test"
+  - SI_REPO_PATH: "images.opencadc.org/storage-inventory"
+  - MINOC_VERSION: 0.9.1
+  - TANTAR_VERSION: 0.4.0
+  - RATIK_VERSION: 0.1.2
+  - FENWICK_VERSION: 0.5.2
+  - CRITWALL_VERSION: 0.4.0
+  - LUSKAN_VERSION: 0.6.0
+  - POSTGRESQL_IMAGE: "swsrc/cadc-postgresql-12-dev"
+  - HAPROXY_IMAGE: "amigahub/cadc-haproxy"
+  - WAIT_SECONDS: 7
+  - WAIT_SECONDS_LONG: 70
+  - HAPROXY_EXPOSED_PORT: 443
+
+  tasks:
+
+  - name: Install dependencies docker.io python-crypto python3-pi acl
+    become: yes
+    ansible.builtin.apt:
+      pkg:
+        - python-crypto
+        - python3-pip
+        - docker.io
+        - acl
+      state: present
+      
+  - name: Install Python bcoz docker SDK
+    package:
+            name: "python3"
+            state: present
+  - name: Check docker sdk installed or not
+    command: "pip3 list | grep docker"
+    register: docker_sdk
+
+  - name: Install Docker Module for Python
+    become: yes
+    pip:
+      name: docker
+
+  - name: creating {{CONFIG_FOLDER}}
+    become: yes
+    ansible.builtin.file:
+      path: "{{CONFIG_FOLDER}}"
+      state: directory
+      mode: 0775
+
+  - name: creating {{CERTIFICATES_FOLDER}}
+    become: yes
+    ansible.builtin.file:
+      path: "{{CERTIFICATES_FOLDER}}"
+      state: directory
+      mode: 0775
+
+  - name: creating {{LOGS_FOLDER}}
+    become: yes
+    ansible.builtin.file:
+      path: "{{LOGS_FOLDER}}"
+      state: directory
+      mode: 0775
+
+  - name: creating {{DATA_DIR}}
+    become: yes
+    ansible.builtin.file:
+      path: "{{DATA_DIR}}"
+      state: directory
+      mode: 0775
+
+  - name: set permissions on {{DATA_DIR}}
+    command: "setfacl -m user:8675309:rwx {{DATA_DIR}}"
+
+  - name: Clone repo with configs
+    become: yes
+    ansible.builtin.git:
+      repo: "{{GIT_REPO}}"
+      dest:  "{{CONFIG_FOLDER}}"
+      version: "{{GIT_VERSION}}"
+    ignore_errors: True
+
+  - name: Pull {{POSTGRESQL_IMAGE}}
+    become: yes
+    docker_image:
+      name: "{{POSTGRESQL_IMAGE}}"
+      source: pull
+
+  - name: Pull {{HAPROXY_IMAGE}}
+    become: yes
+    docker_image:
+      name: "{{HAPROXY_IMAGE}}"
+      source: pull
+
+  - name: Pull minoc:{{MINOC_VERSION}}
+    become: yes
+    docker_image:
+      name: "{{SI_REPO_PATH}}/minoc:{{MINOC_VERSION}}"
+      source: pull
+
+  - name: Pull tantar:{{TANTAR_VERSION}}
+    become: yes
+    docker_image:
+      name: "{{SI_REPO_PATH}}/tantar:{{TANTAR_VERSION}}"
+      source: pull
+
+  - name: Pull ratik:{{RATIK_VERSION}}
+    become: yes
+    docker_image:
+      name: "{{SI_REPO_PATH}}/ratik:{{RATIK_VERSION}}"
+      source: pull
+
+  - name: Pull fenwick:{{FENWICK_VERSION}}
+    become: yes
+    docker_image:
+      name: "{{SI_REPO_PATH}}/fenwick:{{FENWICK_VERSION}}"
+      source: pull
+
+  - name: Pull critwall:{{CRITWALL_VERSION}}
+    become: yes
+    docker_image:
+      name: "{{SI_REPO_PATH}}/critwall:{{CRITWALL_VERSION}}"
+      source: pull
+
+  - name: Pull luskan:{{LUSKAN_VERSION}}
+    become: yes
+    docker_image:
+      name: "{{SI_REPO_PATH}}/luskan:{{LUSKAN_VERSION}}"
+      source: pull
+
+  - name: Launch {{POSTGRESQL_IMAGE}}:latest
+    become: yes
+    docker_container:
+      name: pg12db
+      image: "{{POSTGRESQL_IMAGE}}:latest"
+      ports:
+        - "5432:5432"
+      volumes:
+        - "{{CONFIG_FOLDER}}/config/postgresql:/config:ro"
+        - "{{LOGS_FOLDER}}:/logs:rw"
+      state: started
+  - name: pause for postgresl
+    ansible.builtin.pause:
+      seconds: "{{ WAIT_SECONDS_LONG | int }}"
+
+  - name: Launch minoc
+    become: yes
+    docker_container:
+      name: minoc
+      image: "{{SI_REPO_PATH}}/minoc:{{MINOC_VERSION}}"
+      user: "tomcat:tomcat"
+      links:
+        - "pg12db:pg12db"
+      volumes:
+        - "{{CONFIG_FOLDER}}/config/minoc:/config:ro"
+        - "{{DATA_DIR}}:/data:rw"
+      state: started
+
+  - name: pause for wait to minoc
+    ansible.builtin.pause:
+      seconds: "{{ WAIT_SECONDS | int }}"
+
+  - name: Launch luskan
+    become: yes
+    docker_container:
+      name: luskan
+      image: "{{SI_REPO_PATH}}/luskan:{{LUSKAN_VERSION}}"
+      user: "tomcat:tomcat"
+      links:
+        - "pg12db:pg12db"
+      volumes:
+        - "{{CONFIG_FOLDER}}/config/luskan:/config:ro"
+      state: started
+
+  - name: pause for wait to luskan
+    ansible.builtin.pause:
+      seconds: "{{ WAIT_SECONDS | int }}"
+
+  - name: Launch tantar
+    become: yes
+    docker_container:
+      name: tantar
+      image: "{{SI_REPO_PATH}}/tantar:{{TANTAR_VERSION}}"
+      user: "opencadc:opencadc"
+      links:
+        - "pg12db:pg12db"
+      volumes:
+        - "{{CONFIG_FOLDER}}/config/tantar:/config:ro"
+        - "{{DATA_DIR}}:/data:rw"
+      state: started
+
+  - name: pause for wait to tantar
+    ansible.builtin.pause:
+      seconds: "{{ WAIT_SECONDS | int }}"
+
+  - name: Launch ratik
+    become: yes
+    docker_container:
+      name: ratik
+      image: "{{SI_REPO_PATH}}/ratik:{{RATIK_VERSION}}"
+      user: "opencadc:opencadc"
+      links:
+        - "pg12db:pg12db"
+      volumes:
+        - "{{CONFIG_FOLDER}}/config/ratik:/config:ro"
+      state: started
+
+  - name: pause for wait to ratik
+    ansible.builtin.pause:
+      seconds: "{{ WAIT_SECONDS | int }}"
+
+  - name: Launch fenwick
+    become: yes
+    docker_container:
+      name: fenwick
+      image: "{{SI_REPO_PATH}}/fenwick:{{FENWICK_VERSION}}"
+      user: "opencadc:opencadc"
+      links:
+        - "pg12db:pg12db"
+      volumes:
+        - "{{CONFIG_FOLDER}}/config/fenwick:/config:ro"
+      state: started
+
+  - name: pause for wait to fenwick
+    ansible.builtin.pause:
+      seconds: "{{ WAIT_SECONDS | int }}"
+
+  - name: Launch critwall
+    become: yes
+    docker_container:
+      name: critwall
+      image: "{{SI_REPO_PATH}}/critwall:{{CRITWALL_VERSION}}"
+      user: "opencadc:opencadc"
+      links:
+        - "pg12db:pg12db"
+      volumes:
+        - "{{CONFIG_FOLDER}}/config/critwall:/config:ro"
+        - "{{DATA_DIR}}:/data:rw"
+      state: started
+
+  - name: pause for wait to critwall
+    ansible.builtin.pause:
+      seconds: "{{ WAIT_SECONDS | int }}"
+
+  - name: Launch {{HAPROXY_IMAGE}}
+    become: yes
+    docker_container:
+      name: haproxy
+      image: "{{HAPROXY_IMAGE}}:latest"
+      ports:
+        - "{{HAPROXY_EXPOSED_PORT}}:443"
+      volumes:
+        - "{{LOGS_FOLDER}}:/logs:rw"
+        - "{{CERTIFICATES_FOLDER}}:/config:ro"
+        - "{{CONFIG_FOLDER}}/config/haproxy:/usr/local/etc/haproxy/:rw"
+      links:
+        - "minoc:minoc"
+        - "luskan:luskan"
+        - "critwall:critwall"
+        - "fenwick:fenwick"
+	- "ratik:ratik"
+      state: started

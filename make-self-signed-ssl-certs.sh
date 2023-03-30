@@ -6,13 +6,13 @@ FOR_SERVER='true'
 #FOR_SERVER='false'
 
 # output directory for the certificates
-DIR=/home/ubuntu/ssl/client
+DIR=/home/ubuntu/slf-certs
 
 # config directory from which haproxy loads the certificates
-CONF_DIR=/home/ubuntu//software/src/cadc-storage-inventory/certs/
+CONF_DIR=/home/ubuntu/certificates
 
 # site name; can be anything for the client; should be localhost/an IP address/a domain name for the server
-SITE=130.238.29.214
+SITE=130.238.29.81
 #SITE=random
 
 mkdir -p ${DIR} && cd ${DIR}
