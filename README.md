@@ -1,71 +1,54 @@
-# CADC Storage Inventory
+# CADC Storage Inventory -- local site deployment
+This repository contains an ansible playbook for deployment and instatiation of a local site storage inventory, along with the required configuration files. Both the ansible playbook and the configuration files will quite likely need some tweaking for your local installation.
+## Pre-requisites
+- SSL certificates for the host on the host (check out `make-self-signed-ssl-certs.sh` or create them via letsencrypt.org)
 
-- [CADC Storage Inventory](#cadc-storage-inventory)
-  * [Ansible deployment of CADC Storage Inventory](#ansible-deployment-of-cadc-storage-inventory)
-    + [Use Ansible](#use-ansible)
-    + [Configuring Inventory File](#configuring-inventory-file)
-    + [Run Playbook](#run-playbook)
-  * [Running from CLI](#running-from-cli)
-    + [Start / Stop  Storage Inventory](#start---stop--storage-inventory)
-  * [Building steps-by-step](#building-steps-by-step)
-    + [Java Container](#java-container)
-    + [PostGreSQL Container](#postgresql-container)
-    + [TomCat Container](#tomcat-container)
-    + [HAProxy Container](#haproxy-container)
-  * [Instantiation](#instantiation)
-    + [PostgreSQL](#postgresql)
-    + [TomCat](#tomcat)
-    + [HAproxy](#haproxy)
-  * [Building Storage Inventory](#building-storage-inventory)
-    + [Requirements](#requirements)
-    + [Building `minoc`](#building--minoc-)
-    + [Instantiate `minoc`](#instantiate--minoc-)
-    + [Building `luskan`](#building--luskan-)
-    + [Instantiate `luskan`](#instantiate--luskan-)
-    + [Building `critwall`](#building--critwall-)
-    + [Instantiate `critwall`](#instantiate--critwall-)
-    + [Building `fenwich`](#building--fenwich-)
-    + [Instantiate `fenwich`](#instantiate--fenwich-)
-- [TechDebt](#techdebt)
+In addition, you need to add the target host in `inventories/hosts` unless you're just doing an install on `localhost` (default in the ansible playbook).
 
-# Storage inventory components diagram
-
-![SI](https://github.com/opencadc/storage-inventory/raw/master/docs/storage-site.png)
-
-## Ansible deployment of CADC Storage Inventory
-### Use Ansible
-You can install a released version of Ansible with pip or a package manager. See our installation guide for details on installing Ansible on a variety of platforms.
-
-Power users and developers can run the devel branch, which has the latest features and fixes, directly. Although it is reasonably stable, you are more likely to encounter breaking changes when running the devel branch. We recommend getting involved in the Ansible community if you want to run the devel branch.
-
-
-### Configuring Inventorie File
-You need to add the target host in the inventorie
-```
-vi inventories/hosts
-```
-### Requeriments
-Ansible version: latest.
+You'll also need to have the latest ansible version.
 
 Example: Ubuntu version
 ```
 sudo apt update
 sudo apt upgrade
-sudo apt install software-properties-common
-```
-Next add ppa:ansible/ansible to your system’s Software Source:
-```
-sudo apt-add-repository ppa:ansible/ansible
+sudo apt install software-properties-common ansible
 ```
 You need install ansible-galaxy collection
 ```
 ansible-galaxy collection install community.crypto
 ansible-galaxy collection install community.docker
 ```
+
+## Storage inventory components diagram
+
+![SI](https://github.com/opencadc/storage-inventory/raw/master/docs/storage-site.png)
+
+## Components required for a local storage site
+The below components can either be build from scratch as docker images using the description from the [CADC-Storage Inventory github](https://github.com/opencadc/storage-inventory) or they can be pulled from the [CADC docker image repository](https://images.opencadc.org/)(requires login). Descriptions of how to query what resources are available can be found [here](https://www.opencadc.org/storage-inventory/ops/). Pulling the images requires no login.
+
+### Must have
+ - minoc (handles data upload/download/removal)
+ - luskan (handles the metadata)
+ - postgres database server (e.g. [postgresql from CADC](https://github.com/opencadc/docker-base/tree/master/cadc-postgresql-dev))
+ - proxy server (e.g. [haproxy from CADC](https://github.com/opencadc/docker-base/tree/master/cadc-haproxy-dev))
+
+### Should have
+ - tantar (ensures that content of database and actual data in storage agree)
+ - ratik (validates all metadata between local site and a remote site, e.g. global site)
+ - fenwick (synchronises metadata between local site and remote site in an incremental fashion)
+ - critwall (Process to retrieve files from remote storage sites)
+
+## Ansible deployment of CADC Storage Inventory local site
+The ansible playbook will:
+ - install dependencies like docker, pip, acl
+ - create directories for the config files, for logs, for ssl-certificates, for the actual data
+ - clone this very repo into the directory for the config files
+ - pull the required images from images.opencadc.org/storage-inventory
+ - launch the containers and bind-mount the respective config files and where required the data directory into the contaiers.
+
 ### Run Playbook
-The first step is build the docker images
 ```
-ansible-playbook -i inventories/hosts cadc-install.yml
+ansible-playbook [-i inventories/hosts] install.yml
 ```
 If you get a error during the deployment, remember to remove all created containers
 ```
@@ -73,183 +56,12 @@ docker rm -f $(docker ps -a -q)
 ```
 
 ## Running from CLI
-
+Assuming you have all the required images on your system, you can also start/stop/delete them via the below bash scripts.
 ### Start / Stop  Storage Inventory
 
-Clone this repository
+You can also start/stop the different containers via runing `cadc-si-start.sh`, `cadc-si-stop.sh`. To also delete them or stop and delete in one go you run `cadc-si-delete.sh` or `cadc-si-stop-and-delete.sh`. Make sure you adjust the scripts to your local deployment.
 
-```
-git clone https://gitlab.com/jsancheziaa/cadc-storage-inventory
-```
-
-Run `cadc-si-start.sh`:
-
-```
-cd cadc-storage-inventory
-bash cadc-si-start.sh
-```
-
-To stop all the services:
-
-```
-bash cadc-si-stop.sh
-```
-
-To delete all the services:
-
-```
-bash cadc-si-delete.sh
-```
-
-## Building steps-by-step
-
-### Java Container
-
-```
-docker build -t cadc-java -f Dockerfile .
-```
-
-### PostGreSQL Container
-
-Beforehand update file ´cadc-postgres-dev/src/init/init-content.sh´ and if you are going to deploy minoc, add the next:
-
-```
-...
-DATABASES="minoc_inventory"
-SCHEMAS="schema_minoc_inventory"
-...
-```
-
-Then go to `cadc-postgres-dev` and build the container
-
-```
-docker build -t cadc-postgresql-dev -f Dockerfile.pg10 .
-```
-
-### TomCat Container
-
-```
-docker build -t cadc-tomcat -f Dockerfile .
-```
-
-
-### HAProxy Container
-
-Pre-create a pair of keys autosigned:
-
-```
-openssl genrsa -out mydomain.key 2048
-openssl req -new -key mydomain.key -out mydomain.csr
-openssl x509 -req rsa:2048 -days 365  -in mydomain.csr -signkey mydomain.key -out mydomain.crt
-cat mydomain.key mydomain.crt >> server-cert.pem
-```
-
-Build container:
-
-```
-docker build -t cadc-haproxy-dev -f Dockerfile .
-```
-
-## Instantiation
-
-*Note the order.*
-
-### PostgreSQL
-
-Note: we used "--volume=/Users/manuparra/repos/docker-base/config/" remember to change it.
-
-```
-docker run -d --volume=/Users/manuparra/repos/docker-base/config/postgresql:/config:ro --volume=/Users/manuparra/repos/docker-base/config/postgresql-logs:/logs:rw -p 5432:5432 --name pg10db cadc-postgresql-dev:latest
-```
-
-### TomCat
-```
-docker run -d --user tomcat:tomcat --volume=/Users/manuparra/repos/docker-base/config/tomcat:/config:ro --name cadc-service cadc-tomcat:latest 
-```
-
-### HAproxy
-```
-docker run -d  --volume=/Users/manuparra/repos/docker-base/config/haproxy/logs:/logs:rw --volume=/Users/manuparra/repos/docker-base/certs/:/config:ro --link cadc-service:cadc-service -p 8443:443 --name haproxy cadc-haproxy-dev:latest
-```
-
-
-## Building Storage Inventory
-
-### Requirements
-
-Install `gradle` and `maven`.
-
-Clone this repository:
-
-```
-git clone https://github.com/opencadc/storage-inventory.git
-```
-
-### Building `minoc`
-
-```
-cd minoc
-gradle clean build
-docker build -t minoc -f Dockerfile .
-```
-
-### Instantiate `minoc`
-
-```
-docker run -d --user tomcat:tomcat  --link pg10db:pg10db --volume=/Users/manuparra/repos/docker-base/config/minoc:/config:ro --name minoc cadc-minoc:latest
-```
-
-### Building `luskan`
-
-```
-cd luskan
-gradle clean luskan
-docker build -t luskan -f Dockerfile .
-```
-
-### Instantiate `luskan`
-
-```
-docker run -d --user tomcat:tomcat  --link pg10db:pg10db --volume=/Users/manuparra/repos/docker-base/config/luskan:/config:ro --name luskan cadc-luskan:latest
-```
-
-### Building `critwall`
-
-```
-cd luskan
-gradle clean luskan
-docker build -t luskan -f Dockerfile .
-```
-
-### Instantiate `critwall`
-
-```
-docker run -d --user tomcat:tomcat  --link pg10db:pg10db \
-              --volume=/Users/manuparra/repos/docker-base/config/critwall:/config:ro 
-              --name critwall 
-              critwall:latest
-```
-
-### Building `fenwich`
-
-```
-cd fenwich
-gradle clean fenwich
-docker build -t fenwich -f Dockerfile .
-```
-
-### Instantiate `fenwich`
-
-```
-docker run -d --user tomcat:tomcat  --link pg10db:pg10db \
-              --volume=/Users/manuparra/repos/docker-base/config/fenwick:/config:ro 
-              --name fenwick 
-              fenwick:latest
-```
-
-
-
-# TechDebt
+## TechDebt
 
 - Export HAproxy configuration to solve the Warning: 
 ```
