@@ -4,10 +4,11 @@
   - BASE_DIR: "/home/ubuntu"
   - CONFIG_FOLDER: "{{BASE_DIR}}/config"
   - LOGS_FOLDER: "{{BASE_DIR}}/logs"
-  - CERTIFICATES_FOLDER: "{{BASE_DIR}}/certificates/cacerts"  # SSL certificates need to be in here, cacerts in subdir 'cacerts'
+  # SSL certificates 'server-cert.pem' needs to be in 'certificates', client's cacerts in subdir 'cacerts'
+  - CERTIFICATES_FOLDER: "{{BASE_DIR}}/certificates/cacerts"  
   - GIT_REPO: "https://gitlab.com/ska-telescope/src/ska-opencadc-local-si.git"
   - GIT_VERSION: main
-  - DATA_DIR: "/test"
+  - DATA_DIR: "/minoc-data"
   - SI_REPO_PATH: "images.opencadc.org/storage-inventory"
   - MINOC_VERSION: 0.9.1
   - TANTAR_VERSION: 0.4.0
@@ -261,7 +262,4 @@
       links:
         - "minoc:minoc"
         - "luskan:luskan"
-        - "critwall:critwall"
-        - "fenwick:fenwick"
-	- "ratik:ratik"
       state: started
