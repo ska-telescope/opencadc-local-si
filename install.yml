@@ -263,6 +263,5 @@
         - "luskan:luskan"
         - "critwall:critwall"
         - "fenwick:fenwick"
-	- "tantar:tantar"
 	- "ratik:ratik"
       state: started
