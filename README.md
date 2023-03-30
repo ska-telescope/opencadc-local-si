@@ -1,11 +1,11 @@
 # CADC Storage Inventory -- local site deployment
 This repository contains an ansible playbook for deployment and instatiation of a local site storage inventory, along with the required configuration files. Both the ansible playbook and the configuration files will quite likely need some tweaking for your local installation.
 ## Pre-requisites
-- SSL certificates on the host
+- SSL certificates for the host on the host (check out `make-self-signed-ssl-certs.sh` or create them via letsencrypt.org)
 
-In addition, you need to add the target host in ```inventories/hosts```.
+In addition, you need to add the target host in `inventories/hosts` unless you're just doing an install on `localhost` (default in the ansible playbook).
 
-Ansible version: latest.
+You'll also need to have the latest ansible version.
 
 Example: Ubuntu version
 ```
@@ -39,8 +39,14 @@ The below components can either be build from scratch as docker images using the
  - critwall (Process to retrieve files from remote storage sites)
 
 ## Ansible deployment of CADC Storage Inventory local site
+The ansible playbook will:
+ - install dependencies like docker, pip, acl
+ - create directories for the config files, for logs, for ssl-certificates, for the actual data
+ - clone this very repo into the directory for the config files
+ - pull the required images from images.opencadc.org/storage-inventory
+ - launch the containers and bind-mount the respective config files and where required the data directory into the contaiers.
+
 ### Run Playbook
-The first step is build the docker images
 ```
 ansible-playbook [-i inventories/hosts] install.yml
 ```
@@ -50,7 +56,7 @@ docker rm -f $(docker ps -a -q)
 ```
 
 ## Running from CLI
-
+Assuming you have all the required images on your system, you can also start/stop/delete them via the below bash scripts.
 ### Start / Stop  Storage Inventory
 
 You can also start/stop the different containers via runing `cadc-si-start.sh`, `cadc-si-stop.sh`. To also delete them or stop and delete in one go you run `cadc-si-delete.sh` or `cadc-si-stop-and-delete.sh`. Make sure you adjust the scripts to your local deployment.
