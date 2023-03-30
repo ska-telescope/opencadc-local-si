@@ -7,7 +7,7 @@
   - CERTIFICATES_FOLDER: "{{BASE_DIR}}/certificates/cacerts"  # SSL certificates need to be in here, cacerts in subdir 'cacerts'
   - GIT_REPO: "https://gitlab.com/ska-telescope/src/ska-opencadc-local-si.git"
   - GIT_VERSION: config-update
-  - MINOC_DATA_DIR: "/minoc"
+  - DATA_DIR: "/test"
   - SI_REPO_PATH: "images.opencadc.org/storage-inventory"
   - MINOC_VERSION: 0.9.1
   - TANTAR_VERSION: 0.4.0
@@ -22,6 +22,29 @@
   - HAPROXY_EXPOSED_PORT: 443
 
   tasks:
+
+  - name: Install dependencies docker.io python-crypto python3-pi acl
+    become: yes
+    ansible.builtin.apt:
+      pkg:
+        - python-crypto
+        - python3-pip
+        - docker.io
+        - acl
+      state: present
+      
+  - name: Install Python bcoz docker SDK
+    package:
+            name: "python3"
+            state: present
+  - name: Check docker sdk installed or not
+    command: "pip3 list | grep docker"
+    register: docker_sdk
+
+  - name: Install Docker Module for Python
+    become: yes
+    pip:
+      name: docker
 
   - name: creating {{CONFIG_FOLDER}}
     become: yes
@@ -44,6 +67,16 @@
       state: directory
       mode: 0775
 
+  - name: creating {{DATA_DIR}}
+    become: yes
+    ansible.builtin.file:
+      path: "{{DATA_DIR}}"
+      state: directory
+      mode: 0775
+
+  - name: set permissions on {{DATA_DIR}}
+    command: "setfacl -m user:8675309:rwx {{DATA_DIR}}"
+
   - name: Clone repo with configs
     become: yes
     ansible.builtin.git:
@@ -51,28 +84,6 @@
       dest:  "{{CONFIG_FOLDER}}"
       version: "{{GIT_VERSION}}"
     ignore_errors: True
-
-  - name: Install dependencies docker.io python-crypto python3-pi
-    become: yes
-    ansible.builtin.apt:
-      pkg:
-        - python-crypto
-        - python3-pip
-        - docker.io
-      state: present
-      
-  - name: Install Python bcoz docker SDK
-    package:
-            name: "python3"
-            state: present
-  - name: Check docker sdk installed or not
-    command: "pip3 list | grep docker"
-    register: docker_sdk
-
-  - name: Install Docker Module for Python
-    become: yes
-    pip:
-      name: docker
 
   - name: Pull {{POSTGRESQL_IMAGE}}
     become: yes
@@ -147,7 +158,7 @@
         - "pg12db:pg12db"
       volumes:
         - "{{CONFIG_FOLDER}}/config/minoc:/config:ro"
-        - "{{MINOC_DATA_DIR}}:/data:rw"
+        - "{{DATA_DIR}}:/data:rw"
       state: started
 
   - name: pause for wait to minoc
@@ -180,7 +191,7 @@
         - "pg12db:pg12db"
       volumes:
         - "{{CONFIG_FOLDER}}/config/tantar:/config:ro"
-        - "{{MINOC_DATA_DIR}}:/data:rw"
+        - "{{DATA_DIR}}:/data:rw"
       state: started
 
   - name: pause for wait to tantar
@@ -229,7 +240,7 @@
         - "pg12db:pg12db"
       volumes:
         - "{{CONFIG_FOLDER}}/config/critwall:/config:ro"
-        - "{{MINOC_DATA_DIR}}:/data:rw"
+        - "{{DATA_DIR}}:/data:rw"
       state: started
 
   - name: pause for wait to critwall
