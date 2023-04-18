@@ -1,43 +1,42 @@
 ---
 - hosts: localhost
-  vars:
-  - BASE_DIR: "/home/ubuntu"
-  - CONFIG_FOLDER: "{{BASE_DIR}}/config"
-  - LOGS_FOLDER: "{{BASE_DIR}}/logs"
-  # SSL certificates 'server-cert.pem' needs to be in 'certificates', client's cacerts in subdir 'cacerts'
-  - CERTIFICATES_FOLDER: "{{BASE_DIR}}/certificates/cacerts"  
-  - GIT_REPO: "https://gitlab.com/ska-telescope/src/ska-opencadc-local-si.git"
-  - GIT_VERSION: main
-  - DATA_DIR: "/minoc-data"
-  - SI_REPO_PATH: "images.opencadc.org/storage-inventory"
-  - MINOC_VERSION: 0.9.1
-  - TANTAR_VERSION: 0.4.0
-  - RATIK_VERSION: 0.1.2
-  - FENWICK_VERSION: 0.5.2
-  - CRITWALL_VERSION: 0.4.0
-  - LUSKAN_VERSION: 0.6.0
-  - POSTGRESQL_IMAGE: "swsrc/cadc-postgresql-12-dev"
-  - HAPROXY_IMAGE: "amigahub/cadc-haproxy"
-  - WAIT_SECONDS: 7
-  - WAIT_SECONDS_LONG: 70
-  - HAPROXY_EXPOSED_PORT: 443
-
+  vars_files:
+    - vars.yaml
   tasks:
 
-  - name: Install dependencies docker.io python-crypto python3-pi acl
-    become: yes
-    ansible.builtin.apt:
-      pkg:
+  - name: Show ansible_python_interpreter
+    debug:
+      var: ansible_python_interpreter
+
+  - name: Set dependency package names for Debian
+    set_fact:
+      dependency_packages:
         - python-crypto
         - python3-pip
         - docker.io
         - acl
+    when: ansible_os_family == "Debian"
+
+  - name: Set package names for RedHat
+    set_fact:
+      dependency_packages:
+        - python3.11-pip # ansible has python3.11 as a dependency (instead of just python3, which would have been sane)
+        - python3.11-setuptools
+        - docker-ce
+        - acl
+    when: ansible_os_family == "RedHat"
+
+  - name: Install dependencies
+    become: yes
+    ansible.builtin.package:
+      name: "{{ dependency_packages }}"
       state: present
-      
+
   - name: Install Python bcoz docker SDK
     package:
-            name: "python3"
-            state: present
+      name: "python3"
+      state: present
+
   - name: Check docker sdk installed or not
     command: "pip3 list | grep docker"
     register: docker_sdk
@@ -47,12 +46,12 @@
     pip:
       name: docker
 
-  - name: creating {{CONFIG_FOLDER}}
-    become: yes
-    ansible.builtin.file:
-      path: "{{CONFIG_FOLDER}}"
-      state: directory
-      mode: 0775
+#  - name: creating {{CONFIG_FOLDER}}
+#    become: yes
+#    ansible.builtin.file:
+#      path: "{{CONFIG_FOLDER}}"
+#      state: directory
+#      mode: 0775
 
   - name: creating {{CERTIFICATES_FOLDER}}
     become: yes
@@ -78,13 +77,24 @@
   - name: set permissions on {{DATA_DIR}}
     command: "setfacl -m user:8675309:rwx {{DATA_DIR}}"
 
-  - name: Clone repo with configs
-    become: yes
-    ansible.builtin.git:
-      repo: "{{GIT_REPO}}"
-      dest:  "{{CONFIG_FOLDER}}"
-      version: "{{GIT_VERSION}}"
-    ignore_errors: True
+#  - name: Clone repo with configs
+#    become: yes
+#    ansible.builtin.git:
+#      repo: "{{GIT_REPO}}"
+#      dest:  "{{CONFIG_FOLDER}}"
+#      version: "{{GIT_VERSION}}"
+#    ignore_errors: True
+
+  - name: Start docker
+    service:
+      name: docker
+      state: started
+
+#  - name: Start podman service on RedHat-based OS
+#    when: ansible_os_family == "RedHat"
+#    service:
+#      name: podman.socket
+#      state: started
 
   - name: Pull {{POSTGRESQL_IMAGE}}
     become: yes
@@ -134,6 +144,11 @@
       name: "{{SI_REPO_PATH}}/luskan:{{LUSKAN_VERSION}}"
       source: pull
 
+  - name: Create user-defined bridge network
+    become: yes
+    docker_network:
+      name: si-network
+
   - name: Launch {{POSTGRESQL_IMAGE}}:latest
     become: yes
     docker_container:
@@ -144,6 +159,8 @@
       volumes:
         - "{{CONFIG_FOLDER}}/config/postgresql:/config:ro"
         - "{{LOGS_FOLDER}}:/logs:rw"
+      networks:
+        - name: si-network
       state: started
   - name: pause for postgresl
     ansible.builtin.pause:
@@ -155,11 +172,11 @@
       name: minoc
       image: "{{SI_REPO_PATH}}/minoc:{{MINOC_VERSION}}"
       user: "tomcat:tomcat"
-      links:
-        - "pg12db:pg12db"
       volumes:
         - "{{CONFIG_FOLDER}}/config/minoc:/config:ro"
         - "{{DATA_DIR}}:/data:rw"
+      networks:
+        - name: si-network
       state: started
 
   - name: pause for wait to minoc
@@ -172,10 +189,10 @@
       name: luskan
       image: "{{SI_REPO_PATH}}/luskan:{{LUSKAN_VERSION}}"
       user: "tomcat:tomcat"
-      links:
-        - "pg12db:pg12db"
       volumes:
         - "{{CONFIG_FOLDER}}/config/luskan:/config:ro"
+      networks:
+        - name: si-network
       state: started
 
   - name: pause for wait to luskan
@@ -188,11 +205,11 @@
       name: tantar
       image: "{{SI_REPO_PATH}}/tantar:{{TANTAR_VERSION}}"
       user: "opencadc:opencadc"
-      links:
-        - "pg12db:pg12db"
       volumes:
         - "{{CONFIG_FOLDER}}/config/tantar:/config:ro"
         - "{{DATA_DIR}}:/data:rw"
+      networks:
+        - name: si-network
       state: started
 
   - name: pause for wait to tantar
@@ -205,10 +222,10 @@
       name: ratik
       image: "{{SI_REPO_PATH}}/ratik:{{RATIK_VERSION}}"
       user: "opencadc:opencadc"
-      links:
-        - "pg12db:pg12db"
       volumes:
         - "{{CONFIG_FOLDER}}/config/ratik:/config:ro"
+      networks:
+        - name: si-network
       state: started
 
   - name: pause for wait to ratik
@@ -221,10 +238,10 @@
       name: fenwick
       image: "{{SI_REPO_PATH}}/fenwick:{{FENWICK_VERSION}}"
       user: "opencadc:opencadc"
-      links:
-        - "pg12db:pg12db"
       volumes:
         - "{{CONFIG_FOLDER}}/config/fenwick:/config:ro"
+      networks:
+        - name: si-network
       state: started
 
   - name: pause for wait to fenwick
@@ -237,11 +254,11 @@
       name: critwall
       image: "{{SI_REPO_PATH}}/critwall:{{CRITWALL_VERSION}}"
       user: "opencadc:opencadc"
-      links:
-        - "pg12db:pg12db"
       volumes:
         - "{{CONFIG_FOLDER}}/config/critwall:/config:ro"
         - "{{DATA_DIR}}:/data:rw"
+      networks:
+        - name: si-network
       state: started
 
   - name: pause for wait to critwall
@@ -259,7 +276,7 @@
         - "{{LOGS_FOLDER}}:/logs:rw"
         - "{{CERTIFICATES_FOLDER}}:/config:ro"
         - "{{CONFIG_FOLDER}}/config/haproxy:/usr/local/etc/haproxy/:rw"
-      links:
-        - "minoc:minoc"
-        - "luskan:luskan"
+      networks:
+        - name: si-network
+      command: haproxy -V -f /usr/local/etc/haproxy/haproxy.cfg
       state: started

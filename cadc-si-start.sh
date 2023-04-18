@@ -3,10 +3,10 @@
 # Pull all the containers precreated
 
 # Default config files locate in ${CONFIG_FOLDER}
-CONFIG_FOLDER="/home/ubuntu/config"
-LOGS_FOLDER="/home/ubuntu/logs"
+CONFIG_FOLDER="/home/cloud-user/si/config"
+LOGS_FOLDER="/home/cloud-user/si/logs"
 # Define where the data will live, directory need XXX permissons
-DATA_DIR="/minoc"
+DATA_DIR="/data"
 SI_REPO_PATH="images.opencadc.org/storage-inventory"
 MINOC_VERSION=0.9.1
 TANTAR_VERSION=0.4.0
@@ -17,7 +17,7 @@ LUSKAN_VERSION=0.6.0
 POSTGRESQL_IMAGE="swsrc/cadc-postgresql-12-dev"
 HAPROXY_IMAGE="amigahub/cadc-haproxy"
 WAIT_SECONDS=7
-WAIT_SECONDS_LONG=70
+WAIT_SECONDS_LONG=7
 HAPROXY_EXPOSED_PORT=443
 
 docker pull ${POSTGRESQL_IMAGE}
