@@ -13,9 +13,9 @@
   - SI_REPO_PATH: "images.opencadc.org/storage-inventory"
   - MINOC_VERSION: 0.9.1
   - TANTAR_VERSION: 0.4.0
-  - RATIK_VERSION: 0.1.2
-  - FENWICK_VERSION: 0.5.2
-  - CRITWALL_VERSION: 0.4.0
+  - RATIK_VERSION: 0.1.4
+  - FENWICK_VERSION: 0.5.4
+  - CRITWALL_VERSION: 0.4.3
   - LUSKAN_VERSION: 0.6.0
   - POSTGRESQL_IMAGE: "swsrc/cadc-postgresql-12-dev"
   - HAPROXY_IMAGE: "amigahub/cadc-haproxy"
