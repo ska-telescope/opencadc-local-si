@@ -4,7 +4,9 @@
   - BASE_DIR: "/root/franz/"
   - CONFIG_FOLDER: "{{BASE_DIR}}/config"
   - LOGS_FOLDER: "{{BASE_DIR}}/logs"
-  # SSL certificates 'server-cert.pem' needs to be in 'certificates', client's cacerts in subdir 'cacerts'
+  # SSL certificates 'server-cert.pem' (server's public+private SSL keys)
+  # needs to be in 'certificates', servers cacerts in subdir 'cacerts' (e.g. fullchain.pem
+  # from letsencrypt
   - CACERTIFICATES_FOLDER: "{{BASE_DIR}}/certificates/cacerts"
   - CERTIFICATES_FOLDER: "{{BASE_DIR}}/certificates"  
   - GIT_REPO: "https://gitlab.com/ska-telescope/src/ska-opencadc-local-si.git"
