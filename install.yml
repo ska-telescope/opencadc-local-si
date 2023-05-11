@@ -1,21 +1,23 @@
 ---
 - hosts: localhost
   vars:
-  - BASE_DIR: "/home/ubuntu"
+  - BASE_DIR: "/root/franz/"
   - CONFIG_FOLDER: "{{BASE_DIR}}/config"
   - LOGS_FOLDER: "{{BASE_DIR}}/logs"
-  # SSL certificates 'server-cert.pem' needs to be in 'certificates', client's cacerts in subdir 'cacerts'
+  # SSL certificates 'server-cert.pem' (server's public+private SSL keys)
+  # needs to be in 'certificates', servers cacerts in subdir 'cacerts' (e.g. fullchain.pem
+  # from letsencrypt
   - CACERTIFICATES_FOLDER: "{{BASE_DIR}}/certificates/cacerts"
   - CERTIFICATES_FOLDER: "{{BASE_DIR}}/certificates"  
   - GIT_REPO: "https://gitlab.com/ska-telescope/src/ska-opencadc-local-si.git"
-  - GIT_VERSION: main
-  - DATA_DIR: "/minoc-data"
+  - GIT_VERSION: cirrus100
+  - DATA_DIR: "/data-si"
   - SI_REPO_PATH: "images.opencadc.org/storage-inventory"
   - MINOC_VERSION: 0.9.1
   - TANTAR_VERSION: 0.4.0
-  - RATIK_VERSION: 0.1.2
-  - FENWICK_VERSION: 0.5.2
-  - CRITWALL_VERSION: 0.4.0
+  - RATIK_VERSION: 0.1.4
+  - FENWICK_VERSION: 0.5.4
+  - CRITWALL_VERSION: 0.4.3
   - LUSKAN_VERSION: 0.6.0
   - POSTGRESQL_IMAGE: "swsrc/cadc-postgresql-12-dev"
   - HAPROXY_IMAGE: "amigahub/cadc-haproxy"
@@ -27,11 +29,11 @@
 
   - name: Install dependencies docker.io python-crypto python3-pi acl
     become: yes
-    ansible.builtin.apt:
+    ansible.builtin.dnf:
       pkg:
-        - python-crypto
+#        - python-crypto
         - python3-pip
-        - docker.io
+        - docker-ce
         - acl
       state: present
       
