@@ -58,6 +58,10 @@ Assuming you have all the required images on your system, you can also start/sto
 
 You can also start/stop the different containers via runing `cadc-si-start.sh`, `cadc-si-stop.sh`. To also delete them or stop and delete in one go you run `cadc-si-delete.sh` or `cadc-si-stop-and-delete.sh`. Make sure you adjust the scripts to your local deployment.
 
+## Testing deployment
+ - test if services are online and available via the availability hooks described [here](https://www.opencadc.org/storage-inventory/ops/#deployment) (e.g. for minoc: `curl https://www.example.org/minoc/availability`)
+ - there is also a demo video and some example test commands with curl on [this site](https://www.canfar.net/storage/vault/list/pdowler/SRCnet/SI-demo)
+
 ## TechDebt
 
 - Export HAproxy configuration to solve the Warning: 
