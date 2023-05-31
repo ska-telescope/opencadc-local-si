@@ -13,12 +13,12 @@
   - GIT_VERSION: cirrus100
   - DATA_DIR: "/data-si"
   - SI_REPO_PATH: "images.opencadc.org/storage-inventory"
-  - MINOC_VERSION: 0.9.1
+  - MINOC_VERSION: 0.9.5
   - TANTAR_VERSION: 0.4.0
   - RATIK_VERSION: 0.1.4
-  - FENWICK_VERSION: 0.5.4
+  - FENWICK_VERSION: 0.5.5
   - CRITWALL_VERSION: 0.4.3
-  - LUSKAN_VERSION: 0.6.0
+  - LUSKAN_VERSION: 0.6.3
   - POSTGRESQL_IMAGE: "swsrc/cadc-postgresql-12-dev"
   - HAPROXY_IMAGE: "amigahub/cadc-haproxy"
   - WAIT_SECONDS: 7
