@@ -27,7 +27,7 @@ The below components can either be build from scratch as docker images using the
  - postgres database server (e.g. [postgresql from CADC](https://github.com/opencadc/docker-base/tree/master/cadc-postgresql-dev))
  - proxy server (e.g. [haproxy from CADC](https://github.com/opencadc/docker-base/tree/master/cadc-haproxy-dev))
 
-### Should have
+### Should have (must for multi-site/global functionality)
  - tantar (ensures that content of database and actual data in storage agree)
  - ratik (validates all metadata between local site and a remote site, e.g. global site)
  - fenwick (synchronises metadata between local site and remote site in an incremental fashion)
@@ -37,9 +37,9 @@ The below components can either be build from scratch as docker images using the
 The ansible playbook will:
  - install dependencies like docker, pip, acl
  - create directories for the config files, for logs, for ssl-certificates, for the actual data
- - clone this very repo into the directory for the config files
  - pull the required images from images.opencadc.org/storage-inventory
  - launch the containers and bind-mount the respective config files and where required the data directory into the contaiers.
+ - check out `vars.template.yaml` on parameters that need to be set for this playbook to work
 
 The only complication will be that you will need to put the SSL-certificates into the certificates directory specified in the playbook file. The server's public + private key need to be in a file called server-cert.pem and the client's CA-certificates will need to be in the subdirectory `cacerts` inside the certificates directory.
 
