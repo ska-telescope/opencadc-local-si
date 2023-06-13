@@ -1,6 +1,7 @@
 ---
 - hosts: localhost
   vars_files:
+    # check out vars.template.yaml for a description of the required paramters
     - vars.yaml
   tasks:
 
