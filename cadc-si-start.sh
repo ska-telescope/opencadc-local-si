@@ -1,24 +1,15 @@
 #!/bin/bash
 
-# Pull all the containers precreated
+set -e
 
-# Default config files locate in ${CONFIG_FOLDER}
-CONFIG_FOLDER="/home/ubuntu/config"
-LOGS_FOLDER="/home/ubuntu/logs"
-# Define where the data will live, directory need XXX permissons
-DATA_DIR="/minoc"
-SI_REPO_PATH="images.opencadc.org/storage-inventory"
-MINOC_VERSION=0.9.1
-TANTAR_VERSION=0.4.0
-RATIK_VERSION=0.1.2
-FENWICK_VERSION=0.5.2
-CRITWALL_VERSION=0.4.0
-LUSKAN_VERSION=0.6.0
-POSTGRESQL_IMAGE="swsrc/cadc-postgresql-12-dev"
-HAPROXY_IMAGE="amigahub/cadc-haproxy"
-WAIT_SECONDS=7
-WAIT_SECONDS_LONG=70
-HAPROXY_EXPOSED_PORT=443
+# create a tempory set of variables from the (hopefully) existing vars.yaml
+cat vars.yaml | sed 's/---/#/g' | sed 's/: /=/g' | sed 's/{{/${/g' | sed 's/}}/}/g' > /tmp/vars.sh
+source /tmp/vars.sh
+
+
+# create required directories
+mkdir -p ${LOGS_FOLDER}
+mkdir -p ${CACERTIFICATES_FOLDER}
 
 docker pull ${POSTGRESQL_IMAGE}
 docker pull ${HAPROXY_IMAGE}
@@ -29,78 +20,108 @@ docker pull ${SI_REPO_PATH}/fenwick:${FENWICK_VERSION}
 docker pull ${SI_REPO_PATH}/critwall:${CRITWALL_VERSION}
 docker pull ${SI_REPO_PATH}/luskan:${LUSKAN_VERSION}
 
-# Instantiate cadc-postgresql
-docker run -d --volume=${CONFIG_FOLDER}/config/postgresql:/config:ro \
-              --volume=${LOGS_FOLDER}/:/logs:rw \
-              -p 5432:5432 
-              --name pg12db 
-              ${POSTGRESQL_IMAGE}:latest
+# create the network to be used by all
+echo "starting the network"
+docker network create si-network
 
+
+# Instantiate postgresql
+echo "starting postgresql server"
+docker run -d \
+       --volume=${CONFIG_FOLDER}/postgresql:/config:ro \
+       --volume=${LOGS_FOLDER}:/logs:rw \
+       -p 5432:5432 \
+       --name pg12db \
+       --network si-network \
+       ${POSTGRESQL_IMAGE}
 # Wait to populate
 sleep ${WAIT_SECONDS_LONG}
 
-# Instantiate minoc
-docker run -d --user tomcat:tomcat  --link pg12db:pg12db \
-       --volume=${CONFIG_FOLDER}/config/minoc:/config:ro \
+# Launch minoc
+echo "starting minoc"
+docker run -d \
+       --volume=${CONFIG_FOLDER}/minoc:/config:ro \
+       --volume=${CONFIG_FOLDER}/cadc-registry.properties:/config/cadc-registry.properties:ro \
        --volume=${DATA_DIR}:/data:rw \
+       --user tomcat:tomcat \
        --name minoc \
-       ${SI_REPO_PATH}/minoc:${MINOC_VERSION}
-
-#Wait
+       --network si-network \
+       ${SI_REPO_PATH}/minoc:${MINOC_VERSION} 
+# Wait to start up
 sleep ${WAIT_SECONDS}
 
-# Instantiate luskan
-docker run -d --user tomcat:tomcat  --link pg12db:pg12db \
-       --volume=${CONFIG_FOLDER}/config/luskan:/config:ro \
+# Launch luskan
+echo "starting luskan"
+docker run -d \
+       --volume=${CONFIG_FOLDER}/luskan:/config:ro \
+       --volume=${CONFIG_FOLDER}/cadc-registry.properties:/config/cadc-registry.properties:ro \
+       --user tomcat:tomcat \
        --name luskan \
+       --network si-network \
        ${SI_REPO_PATH}/luskan:${LUSKAN_VERSION}
-      # optionally add the below if baseStorageDir in cadc-tap-tmp.properties is not /tmp
-      #--volume=/dir/on/host:/data:rw
-
-#Wait 
+# Wait to start up
 sleep ${WAIT_SECONDS}
+
 # Instantiate fenwick
-docker run -d --user opencadc:opencadc  --link pg10db:pg10db \
-              --volume=${CONFIG_FOLDER}/config/fenwick:/config:ro 
-              --name fenwick 
-              ${SI_REPO_PATH}/fenwick:${FENWICK_VERSION}
-#Wait 
-sleep ${WAIT_SECONDS}
-# Instantiate critwall
-docker run -d --user opencadc:opencadc  --link pg10db:pg10db \
-              --volume=${CONFIG_FOLDER}/config/critwall:/config:ro 
-              --name critwall 
-              ${SI_REPO_PATH}/critwall:${CRITWALL_VERSION}
-
-sleep ${WAIT_SECONDS}	      
-
-# Instantiate tantar
-docker run -d --user opencadc:opencadc  --link pg12db:pg12db \
-       --volume=${CONFIG_FOLDER}/config/tantar:/config:ro \
-       --volume=${DATA_DIR}:/data:rw \
-       --name tantar \
-       ${SI_REPO_PATH}/tantar:${TANTAR_VERSION}
-
-#Wait
+echo "starting fenwick"
+docker run -d \
+       --volume=${CONFIG_FOLDER}/fenwick/:/config:ro \
+       --volume=${CONFIG_FOLDER}/cadc-registry.properties:/config/cadc-registry.properties:ro \
+       --user opencadc:opencadc \
+       --name fenwick \
+       --network si-network \
+       ${SI_REPO_PATH}/fenwick:${FENWICK_VERSION}
+# Wait to start up
 sleep ${WAIT_SECONDS}
 
 # Instantiate ratik
-docker run -d --user opencadc:opencadc  --link pg12db:pg12db \
-       --volume=${CONFIG_FOLDER}/config/ratik:/config:ro \
+echo "starting ratik"
+docker run -d \
+       --volume=${CONFIG_FOLDER}/ratik/:/config:ro \
+       --volume=${CONFIG_FOLDER}/cadc-registry.properties:/config/cadc-registry.properties:ro \
+       --user opencadc:opencadc \
        --name ratik \
+       --network si-network \
        ${SI_REPO_PATH}/ratik:${RATIK_VERSION}
-
-#Wait
+# Wait to start up
 sleep ${WAIT_SECONDS}
 
+# Launch critwall
+echo "starting critwall"
+docker run -d \
+       --volume=${CONFIG_FOLDER}/critwall:/config:ro \
+       --volume=${CONFIG_FOLDER}/cadc-registry.properties:/config/cadc-registry.properties:ro \
+       --volume=${DATA_DIR}:/data:rw \
+       --user opencadc:opencadc \
+       --name critwall \
+       --network si-network \
+       ${SI_REPO_PATH}/critwall:${CRITWALL_VERSION}
+# Wait to start up
+sleep ${WAIT_SECONDS}
 
-# Instantiate cadc-haproxy
-docker run -d --volume=${LOGS_FOLDER}:/logs:rw \
-              --volume=${CERTIFICATES_FOLDER}:/config:ro \
-	      --volume=${CONFIG_FOLDER}/config/haproxy:/usr/local/etc/haproxy/:rw \
-              --link minoc:minoc \
-              --link luskan:luskan \
-              -p ${HAPROXY_EXPOSED_PORT}:443 \
-              --name haproxy \
-              ${HAPROXY_IMAGE}:latest
+# Launch tantar
+echo "starting tantar"
+docker run -d \
+       --volume=${CONFIG_FOLDER}/tantar:/config:ro \
+       --volume=${CONFIG_FOLDER}/cadc-registry.properties:/config/cadc-registry.properties:ro \
+       --volume=${DATA_DIR}:/data:rw \
+       --user opencadc:opencadc \
+       --name tantar \
+       --network si-network \
+       ${SI_REPO_PATH}/tantar:${TANTAR_VERSION}
+# Wait to start up
+sleep ${WAIT_SECONDS}
+
+# Instantiate haproxy
+echo "starting haproxy"
+docker run -d \
+       --volume=${CERTIFICATES_FOLDER}/:/config:ro \
+       --volume=${LOGS_FOLDER}:/logs:rw \
+       --volume=${CONFIG_FOLDER}/haproxy:/usr/local/etc/haproxy/:rw \
+       -p ${HAPROXY_EXPOSED_PORT}:443 \
+       --name haproxy \
+       --network si-network \
+       ${HAPROXY_IMAGE}
+# Wait to populate
+sleep ${WAIT_SECONDS_LONG}
 
