@@ -1,0 +1,21 @@
+---
+BASE_DIR:               # directory relative to which logs/configs/certificates are; e.g. "/home/user/"
+CONFIG_FOLDER:          # path to where this repo lives; e.g. "{{BASE_DIR}}/ska-opencadc-local-si"
+LOGS_FOLDER:            # haproxy and postgresql logs go here; e.g. "{{CONFIG_FOLDER}}/logs"
+CERTIFICATES_FOLDER:    # path to where server-cert.pem is; e.g. "{{CONFIG_FOLER}}/certificates"
+CACERTIFICATES_FOLDER:  # extra CA-certs (e.g. fullchain.pem) live here; expected to be "{{CERTIFICATES_FOLDER}}/cacerts"
+DATA_DIR:               # path where the data will be written to; e.g. "/data"
+SI_REPO_PATH:           # CADC storage inventory repo: "images.opencadc.org/storage-inventory"
+MINOC_VERSION: 0.9.5    # which version of minoc to use (pulled from SI_REPO_PATH)
+TANTAR_VERSION: 0.4.0   # same for tantar
+RATIK_VERSION: 0.1.5    # and ratik
+FENWICK_VERSION: 0.5.5  # and fenwick
+CRITWALL_VERSION: 0.4.3 # and critwall
+LUSKAN_VERSION: 0.6.3   # and luskan
+TANTAR_VERSION: 0.4.0   # and tantar
+POSTGRESQL_IMAGE:       # repo that holds the postgresql image: "swsrc/cadc-postgresql-12-dev"
+HAPROXY_IMAGE:          # repo that has the haproxy image: "amigahub/cadc-haproxy"
+WAIT_SECONDS: 7         # time in seconds to wait for container to be started before going to the next
+WAIT_SECONDS_LONG: 70   # same but longer
+HAPROXY_EXPOSED_PORT:   # port on which the haproxy should listen. This port is mapped to 443 in the container.
+
