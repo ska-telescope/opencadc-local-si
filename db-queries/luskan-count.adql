@@ -1,0 +1,2 @@
+SELECT count(id)
+from inventory.Artifact
